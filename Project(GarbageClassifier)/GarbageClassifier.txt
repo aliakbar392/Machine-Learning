@@ -1,0 +1,31 @@
+from fastai.vision import *
+ls()
+path = Path(r'C:\Users\user\dataset-resized')
+path.mkdir(parents=True, exist_ok=True)
+path.ls()
+classes = ['cardboard','glass','metal','paper','plastic','trash']
+for c in classes:
+    print(c)
+    verify_images(path/c, delete=True, max_size=500)
+np.random.seed(42)
+data = ImageDataBunch.from_folder(path, train=".", size=224, valid_pct=0.2,
+        ds_tfms=get_transforms(),num_workers=4).normalize(imagenet_stats)
+data.classes, len(data.valid_ds), len(data.train_ds)
+data.show_batch(rows=3, figsize=(7,8))
+learn = cnn_learner(data, models.resnet34, metrics=accuracy)
+learn.fit_one_cycle(5)
+learn.save('stage-1')
+learn.unfreeze()
+learn.lr_find()
+learn.recorder.plot()
+learn.fit_one_cycle(2, max_lr=slice(1e-5,1e-3))
+interp = ClassificationInterpretation.from_learner(learn)
+interp.plot_confusion_matrix()
+learn.save('stage2')
+learn.export()
+defaults.device = torch.device('cuda')
+img = open_image(path/'a.jpeg')
+img
+learn = load_learner(path)
+pred_class,pred_idx,outputs = learn.predict(img)
+pred_class
